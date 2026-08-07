@@ -142,6 +142,17 @@
                 </div>
             </div>
 
+            <!-- LIVE SHEET DOCK — always visible while working on data, so changes are seen instantly -->
+            <div class="live-sheet-dock" id="liveSheetDock" style="display:none;">
+                <div class="live-sheet-header">
+                    <span class="live-sheet-title"><i class="fas fa-table"></i> Live Sheet <small>— every change below appears here right away</small></span>
+                    <input type="text" id="globalFilter" placeholder="🔍 Search across every column..." oninput="applyGlobalFilter()" />
+                </div>
+                <div class="data-grid-container" id="dataGridContainer">
+                    <div id="dataGrid"></div>
+                </div>
+            </div>
+
             <!-- TAB: Dashboard -->
             <div id="tab-dashboard" class="tab-content active">
                 <div class="dashboard-welcome">
@@ -202,6 +213,7 @@
                         <button class="btn template" data-template="sales">📊 <span class="t-label">Sales</span></button>
                         <button class="btn template" data-template="inventory">📦 <span class="t-label">Inventory</span></button>
                         <button class="btn template" data-template="project">📅 <span class="t-label">Project</span></button>
+                        <button class="btn" id="browseAllTemplatesBtn" onclick="openTemplateGallery()"><i class="fas fa-swatchbook"></i> Browse all 50 designs</button>
                     </div>
                 </div>
             </div>
@@ -228,12 +240,7 @@
                     <button class="btn" onclick="fillMissingValues()"><i class="fas fa-fill-drip"></i> Fill Missing Values</button>
                     <button class="btn" onclick="trimSpaces()"><i class="fas fa-broom"></i> Trim Extra Spaces</button>
                 </div>
-                <div class="filter-bar">
-                    <input type="text" id="globalFilter" placeholder="🔍 Search across every column..." oninput="applyGlobalFilter()" />
-                </div>
-                <div class="data-grid-container" id="dataGridContainer">
-                    <div id="dataGrid"></div>
-                </div>
+                <p class="dock-hint"><i class="fas fa-arrow-up"></i> Watch the Live Sheet above — it updates the moment you click a button.</p>
             </div>
 
             <!-- TAB: Pivot -->
@@ -286,9 +293,24 @@
                         <label>Upload the second file to pull data from:</label>
                         <input type="file" id="lookupFile" accept=".xlsx,.csv" />
                     </div>
+
+                    <!-- Boundary preview: shows File 1 (main, in the Live Sheet above) vs File 2 (secondary) clearly -->
+                    <div class="file-boundary-row">
+                        <div class="file-boundary-card file-1">
+                            <span class="file-boundary-tag">📄 File 1 — Main</span>
+                            <span id="boundaryFile1Info">Shown in the Live Sheet above</span>
+                        </div>
+                        <div class="file-boundary-arrow"><i class="fas fa-arrow-right"></i></div>
+                        <div class="file-boundary-card file-2">
+                            <span class="file-boundary-tag">📄 File 2 — Secondary</span>
+                            <span id="boundaryFile2Info">Upload a file above to see it here</span>
+                        </div>
+                    </div>
+                    <div id="lookupPreview" class="lookup-preview"></div>
+
                     <div class="toolbar">
                         <div class="field-block">
-                            <label>Match column in main file</label>
+                            <label>Look for (match column in main file)</label>
                             <select id="lookupKeyMain"><option value="">Choose column…</option></select>
                         </div>
                         <div class="field-block">
@@ -299,7 +321,15 @@
                             <label>Column to bring over</label>
                             <select id="lookupReturn"><option value="">Choose column…</option></select>
                         </div>
-                        <button class="btn primary" onclick="runVlookup()"><i class="fas fa-link"></i> Apply Merge</button>
+                        <div class="field-block">
+                            <label>Place new column</label>
+                            <select id="lookupInsertPos"><option value="end">At the end</option></select>
+                        </div>
+                        <div class="field-block">
+                            <label>New column name</label>
+                            <input type="text" id="lookupNewColName" placeholder="e.g. City" />
+                        </div>
+                        <button class="btn primary" onclick="runVlookup()"><i class="fas fa-link"></i> Apply Merge — watch it appear above</button>
                     </div>
                 </div>
             </div>
@@ -589,6 +619,20 @@
                     <i class="fas fa-circle-info"></i>
                     <span>Every screen in the sidebar follows the same left-to-right flow: <b>Import → Clean → Summarize → Visualize → Export</b>. The numbered tags in the sidebar and the bar under the header always show you where you are.</span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template gallery modal: 50 ready-made designs, grouped by category -->
+    <div class="modal" id="templateGalleryModal">
+        <div class="modal-content wide">
+            <div class="modal-header">
+                <h3><i class="fas fa-swatchbook"></i> 50 Ready-Made Designs</h3>
+                <button onclick="closeModal('templateGalleryModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="gallery-tabs" id="galleryTabs"></div>
+                <div class="template-gallery-grid" id="templateGalleryGrid"></div>
             </div>
         </div>
     </div>
