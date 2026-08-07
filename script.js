@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderDataGrid([]);
     populateFileList();
     updateStats();
+    toggleLiveSheetDock('dashboard');
     
     // Load plugins
     loadPlugins();
@@ -108,6 +109,14 @@ function setupEventListeners() {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             const target = document.getElementById('tab-' + tabId);
             if (target) target.classList.add('active');
+            toggleLiveSheetDock(tabId);
+            if (tabId === 'vlookup') {
+                populateLookupInsertOptions();
+                const f1Info = $('boundaryFile1Info');
+                if (f1Info) f1Info.textContent = state.data.length
+                    ? `${state.headers.length} columns, ${state.data.length} rows — shown in the Live Sheet above`
+                    : 'Import a file first — shown in the Live Sheet above';
+            }
         });
     });
 
@@ -275,7 +284,18 @@ function parseFile(file) {
 }
 
 // ===================== DATA GRID RENDERING =====================
-function renderDataGrid(data) {
+// Tabs that work directly on the loaded sheet — these keep the Live Sheet
+// dock visible above their controls. Page-level tabs (dashboard, import,
+// workflows, plugins, export) hide it since there's nothing to watch yet.
+const DATA_WORKSPACE_TABS = ['data', 'vlookup', 'ifelse', 'pivot', 'charts'];
+
+function toggleLiveSheetDock(tabId) {
+    const dock = $('liveSheetDock');
+    if (!dock) return;
+    dock.style.display = DATA_WORKSPACE_TABS.includes(tabId) ? 'block' : 'none';
+}
+
+function renderDataGrid(data, highlightColumn) {
     if (!data || !data.length) {
         dom.dataGrid.innerHTML = `
             <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-light);">
@@ -291,8 +311,9 @@ function renderDataGrid(data) {
     let html = '<table><thead><tr>';
     
     headers.forEach(header => {
-        html += `<th>
-            ${header}
+        const isNew = highlightColumn && header === highlightColumn;
+        html += `<th${isNew ? ' class="col-new"' : ''}>
+            ${header}${isNew ? ' <i class="fas fa-star" title="Just added"></i>' : ''}
             <input type="text" class="column-filter" data-column="${header}" placeholder="Filter..." />
         </th>`;
     });
@@ -308,7 +329,8 @@ function renderDataGrid(data) {
             if (typeof value === 'string' && value.length > 50) {
                 value = value.substring(0, 50) + '...';
             }
-            html += `<td>${value}</td>`;
+            const isNew = highlightColumn && header === highlightColumn;
+            html += `<td${isNew ? ' class="col-new"' : ''}>${value}</td>`;
         });
         html += '</tr>';
     }
@@ -596,6 +618,42 @@ function buildPivot() {
 // ===================== VLOOKUP =====================
 let lookupData = [];
 
+function populateLookupInsertOptions() {
+    const sel = $('lookupInsertPos');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="end">At the end</option><option value="start">At the start</option>';
+    state.headers.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = 'after:' + h;
+        opt.textContent = 'After "' + h + '"';
+        sel.appendChild(opt);
+    });
+    if ([...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
+function renderLookupPreview(data, fileName) {
+    const box = $('lookupPreview');
+    const info = $('boundaryFile2Info');
+    if (!data || !data.length) {
+        box.innerHTML = '';
+        if (info) info.textContent = 'Upload a file above to see it here';
+        return;
+    }
+    const headers = Object.keys(data[0]);
+    let html = `<table><caption>📄 File 2 boundary — "${fileName}" · ${headers.length} columns · ${data.length} rows (first 5 shown)</caption><thead><tr>`;
+    headers.forEach(h => html += `<th>${h}</th>`);
+    html += '</tr></thead><tbody>';
+    data.slice(0, 5).forEach(row => {
+        html += '<tr>';
+        headers.forEach(h => html += `<td>${row[h] !== undefined && row[h] !== null ? row[h] : ''}</td>`);
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    box.innerHTML = html;
+    if (info) info.textContent = `${fileName} — ${headers.length} columns, ${data.length} rows`;
+}
+
 $('lookupFile').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -623,6 +681,12 @@ $('lookupFile').addEventListener('change', async (e) => {
             opt.textContent = h;
             secSel.appendChild(opt);
         });
+
+        // Show the "File 2" boundary preview and refresh insert-position choices
+        renderLookupPreview(data, file.name);
+        populateLookupInsertOptions();
+        const f1Info = $('boundaryFile1Info');
+        if (f1Info) f1Info.textContent = `${state.headers.length ? state.headers.length + ' columns, ' : ''}${state.data.length} rows — shown in the Live Sheet above`;
         
         showNotification(`✅ Loaded secondary file: ${file.name} (${data.length} rows)`);
     } catch (error) {
@@ -634,6 +698,8 @@ function runVlookup() {
     const keyMain = $('lookupKeyMain').value;
     const keySec = $('lookupKeySecondary').value;
     const returnCol = $('lookupReturn').value;
+    const insertPos = ($('lookupInsertPos') && $('lookupInsertPos').value) || 'end';
+    let newColName = ($('lookupNewColName') && $('lookupNewColName').value.trim()) || returnCol;
     
     if (!keyMain || !keySec || !returnCol) {
         showNotification('⚠️ Please select all VLOOKUP fields.', 'warning');
@@ -644,6 +710,14 @@ function runVlookup() {
         showNotification('⚠️ Please upload a secondary file first.', 'warning');
         return;
     }
+
+    // Make sure the new column name is unique
+    let finalName = newColName;
+    let dupeCount = 1;
+    while (state.headers.includes(finalName)) {
+        finalName = `${newColName}_${dupeCount++}`;
+    }
+    newColName = finalName;
     
     // Build lookup map
     const lookupMap = {};
@@ -656,17 +730,35 @@ function runVlookup() {
     state.data.forEach(row => {
         const key = String(row[keyMain] || '');
         const result = lookupMap[key];
-        row['VLOOKUP_RESULT'] = result !== undefined ? result : 'Not Found';
+        row[newColName] = result !== undefined ? result : 'Not Found';
     });
     
-    if (!state.headers.includes('VLOOKUP_RESULT')) {
-        state.headers.push('VLOOKUP_RESULT');
+    // Insert the new column exactly where the user asked for it
+    state.headers = state.headers.filter(h => h !== newColName);
+    if (insertPos === 'start') {
+        state.headers.unshift(newColName);
+    } else if (insertPos.startsWith('after:')) {
+        const afterCol = insertPos.slice(6);
+        const idx = state.headers.indexOf(afterCol);
+        if (idx === -1) state.headers.push(newColName);
+        else state.headers.splice(idx + 1, 0, newColName);
+    } else {
+        state.headers.push(newColName);
     }
+    // Rebuild every row so its key order matches state.headers (keeps the
+    // grid's column order in sync with where the user chose to place it)
+    state.data = state.data.map(row => {
+        const ordered = {};
+        state.headers.forEach(h => { ordered[h] = row[h] !== undefined ? row[h] : ''; });
+        return ordered;
+    });
     state.filteredData = [...state.data];
-    renderDataGrid(state.filteredData);
+    renderDataGrid(state.filteredData, newColName);
+    setTimeout(() => renderDataGrid(state.filteredData), 3300); // clear the flash highlight
     populateSelectors();
+    populateLookupInsertOptions();
     saveState();
-    showNotification(`✅ VLOOKUP applied! ${state.data.filter(r => r['VLOOKUP_RESULT'] !== 'Not Found').length} matches found.`);
+    showNotification(`✅ "${newColName}" added! ${state.data.filter(r => r[newColName] !== 'Not Found').length} matches found — check the Live Sheet above.`);
 }
 
 // ===================== IF / ELSE =====================
@@ -1132,23 +1224,20 @@ function autoDetect() {
 }
 
 // ===================== TEMPLATES =====================
-function applyTemplate(template) {
+const TEMPLATE_STYLE_MAP = {
+    'hr': { bg: '#e8f4f8', accent: '#2c3e50', highlight: '#3498db' },
+    'finance': { bg: '#f0f8f0', accent: '#1a472a', highlight: '#2ecc71' },
+    'sales': { bg: '#fef8e8', accent: '#b8860b', highlight: '#f39c12' },
+    'inventory': { bg: '#f8f0e8', accent: '#8b4513', highlight: '#e67e22' },
+    'project': { bg: '#f0f0f8', accent: '#4a1a6b', highlight: '#9b59b6' }
+};
+
+function applyTemplateStyle(style, label) {
     if (!state.data || !state.data.length) {
         showNotification('⚠️ Please upload data first.', 'warning');
         return;
     }
-    
-    const styleMap = {
-        'hr': { bg: '#e8f4f8', accent: '#2c3e50', highlight: '#3498db' },
-        'finance': { bg: '#f0f8f0', accent: '#1a472a', highlight: '#2ecc71' },
-        'sales': { bg: '#fef8e8', accent: '#b8860b', highlight: '#f39c12' },
-        'inventory': { bg: '#f8f0e8', accent: '#8b4513', highlight: '#e67e22' },
-        'project': { bg: '#f0f0f8', accent: '#4a1a6b', highlight: '#9b59b6' }
-    };
-    
-    const style = styleMap[template] || styleMap['finance'];
-    
-    // Apply CSS styles dynamically
+
     const styleTag = document.createElement('style');
     styleTag.id = 'template-style';
     styleTag.textContent = `
@@ -1167,15 +1256,91 @@ function applyTemplate(template) {
             font-weight: 700 !important;
         }
     `;
-    
-    // Remove old template style
+
     const oldStyle = document.getElementById('template-style');
     if (oldStyle) oldStyle.remove();
     document.head.appendChild(styleTag);
-    
-    // Re-render to show changes
+
+    // Re-render to show changes, and make sure the Live Sheet is visible
     renderDataGrid(state.filteredData);
-    showNotification(`✅ ${template.charAt(0).toUpperCase() + template.slice(1)} template applied!`);
+    toggleLiveSheetDock(document.querySelector('.sidebar ul li.active')?.dataset.tab || 'data');
+    showNotification(`✅ ${label} design applied — check the sheet.`);
+}
+
+function applyTemplate(template) {
+    const style = TEMPLATE_STYLE_MAP[template] || TEMPLATE_STYLE_MAP['finance'];
+    applyTemplateStyle(style, template.charAt(0).toUpperCase() + template.slice(1));
+}
+
+// ----- 50-design gallery: 5 categories × 10 accent variations each -----
+const TEMPLATE_CATEGORIES = [
+    { key: 'hr', label: 'HR', icon: '👔', ink: '#2c3e50' },
+    { key: 'finance', label: 'Finance', icon: '💰', ink: '#1a472a' },
+    { key: 'sales', label: 'Sales', icon: '📊', ink: '#b8860b' },
+    { key: 'inventory', label: 'Inventory', icon: '📦', ink: '#8b4513' },
+    { key: 'project', label: 'Project', icon: '📅', ink: '#4a1a6b' }
+];
+const TEMPLATE_ACCENTS = ['#3498db', '#2ecc71', '#f39c12', '#e67e22', '#9b59b6', '#e74c3c', '#1abc9c', '#34495e', '#d35400', '#16a085'];
+
+function buildTemplateGallery() {
+    const list = [];
+    TEMPLATE_CATEGORIES.forEach(cat => {
+        TEMPLATE_ACCENTS.forEach((accent, i) => {
+            list.push({
+                id: `${cat.key}_${i + 1}`,
+                category: cat.key,
+                categoryLabel: cat.label,
+                icon: cat.icon,
+                name: `${cat.label} Style ${i + 1}`,
+                style: { bg: accent + '14', accent: cat.ink, highlight: accent }
+            });
+        });
+    });
+    return list; // 5 categories × 10 = 50 designs
+}
+const TEMPLATE_GALLERY = buildTemplateGallery();
+let activeGalleryCategory = 'all';
+
+function openTemplateGallery() {
+    const tabsEl = $('galleryTabs');
+    tabsEl.innerHTML = '';
+    const allTab = document.createElement('button');
+    allTab.className = 'gallery-tab' + (activeGalleryCategory === 'all' ? ' active' : '');
+    allTab.textContent = `All (${TEMPLATE_GALLERY.length})`;
+    allTab.onclick = () => { activeGalleryCategory = 'all'; openTemplateGallery(); };
+    tabsEl.appendChild(allTab);
+    TEMPLATE_CATEGORIES.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'gallery-tab' + (activeGalleryCategory === cat.key ? ' active' : '');
+        btn.textContent = `${cat.icon} ${cat.label} (10)`;
+        btn.onclick = () => { activeGalleryCategory = cat.key; openTemplateGallery(); };
+        tabsEl.appendChild(btn);
+    });
+
+    const grid = $('templateGalleryGrid');
+    const items = activeGalleryCategory === 'all' ? TEMPLATE_GALLERY : TEMPLATE_GALLERY.filter(t => t.category === activeGalleryCategory);
+    grid.innerHTML = items.map(t => `
+        <button class="template-gallery-card" onclick="applyGalleryTemplate('${t.id}')" title="${t.name}">
+            <div class="template-gallery-swatch">
+                <span style="background:${t.style.accent}"></span>
+                <span style="background:${t.style.highlight}"></span>
+                <span style="background:${t.style.bg}"></span>
+            </div>
+            <div class="template-gallery-card-body">
+                <span class="tg-name">${t.icon} ${t.name}</span>
+                <span class="tg-cat">${t.categoryLabel}</span>
+            </div>
+        </button>
+    `).join('');
+
+    openModal('templateGalleryModal');
+}
+
+function applyGalleryTemplate(id) {
+    const t = TEMPLATE_GALLERY.find(x => x.id === id);
+    if (!t) return;
+    applyTemplateStyle(t.style, t.name);
+    closeModal('templateGalleryModal');
 }
 
 // ===================== MERGE FILES =====================
