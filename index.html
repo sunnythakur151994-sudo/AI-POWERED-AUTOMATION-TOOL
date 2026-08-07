@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sheet Commander Pro - AI Office Automation</title>
+
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
+
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <!-- ========== TOP HEADER ========== -->
+    <header class="app-header">
+        <div class="logo">
+            <i class="fas fa-robot"></i>
+            <span>Sheet Commander <span class="badge-pro">PRO</span></span>
+        </div>
+        <div class="header-actions">
+            <button class="btn-icon" id="voiceBtn" title="Voice commands — press Space to talk">
+                <i class="fas fa-microphone"></i>
+                <span class="voice-dot"></span>
+            </button>
+            <button class="btn-icon" id="aiAssistant" title="Ask the AI Assistant">
+                <i class="fas fa-brain"></i>
+            </button>
+            <button class="btn-icon" id="settingsBtn" title="Help & shortcuts">
+                <i class="fas fa-circle-question"></i>
+            </button>
+            <span class="user-badge">👤 Admin</span>
+        </div>
+    </header>
+
+    <!-- ========== "YOU ARE HERE" FORMULA BAR ========== -->
+    <div class="formula-bar" id="formulaBar">
+        <span class="fx">fx</span>
+        <span class="fx-path" id="fxPath">Dashboard</span>
+        <span class="fx-sep">—</span>
+        <span class="fx-desc" id="fxDesc">A quick look at your workspace. Start by importing a file.</span>
+    </div>
+
+    <!-- ========== MAIN LAYOUT ========== -->
+    <div class="app-body">
+        <!-- SIDEBAR -->
+        <nav class="sidebar">
+            <div class="sidebar-group-label">Get Started</div>
+            <ul>
+                <li class="active" data-tab="dashboard" title="Overview of your workspace">
+                    <i class="fas fa-th-large"></i>
+                    <span class="nav-text"><span>Dashboard</span><small>overview</small></span>
+                </li>
+                <li data-tab="import" title="Bring your spreadsheet or CSV in">
+                    <i class="fas fa-upload"></i>
+                    <span class="nav-text"><span>Import Data</span><small>upload files</small></span>
+                    <span class="nav-tag">1</span>
+                </li>
+            </ul>
+
+            <div class="sidebar-group-label">Clean &amp; Shape</div>
+            <ul>
+                <li data-tab="data" title="Sort, search and tidy your rows">
+                    <i class="fas fa-table"></i>
+                    <span class="nav-text"><span>View &amp; Clean</span><small>sort, search, fix</small></span>
+                    <span class="nav-tag">2</span>
+                </li>
+                <li data-tab="vlookup" title="Combine two files by a shared column">
+                    <i class="fas fa-link"></i>
+                    <span class="nav-text"><span>Merge Files</span><small>VLOOKUP</small></span>
+                </li>
+                <li data-tab="ifelse" title="Label or flag rows automatically">
+                    <i class="fas fa-code-branch"></i>
+                    <span class="nav-text"><span>Add Rules</span><small>IF / ELSE</small></span>
+                </li>
+            </ul>
+
+            <div class="sidebar-group-label">Understand</div>
+            <ul>
+                <li data-tab="pivot" title="Group and total your data">
+                    <i class="fas fa-chart-pie"></i>
+                    <span class="nav-text"><span>Summarize</span><small>pivot table</small></span>
+                    <span class="nav-tag">3</span>
+                </li>
+                <li data-tab="charts" title="Turn data into a chart">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="nav-text"><span>Visualize</span><small>charts</small></span>
+                    <span class="nav-tag">4</span>
+                </li>
+            </ul>
+
+            <div class="sidebar-group-label">Automate</div>
+            <ul>
+                <li data-tab="workflows" title="Save a series of steps to reuse">
+                    <i class="fas fa-robot"></i>
+                    <span class="nav-text"><span>Workflows</span><small>one-click runs</small></span>
+                </li>
+                <li data-tab="plugins" title="Connect other tools">
+                    <i class="fas fa-puzzle-piece"></i>
+                    <span class="nav-text"><span>Plugins</span><small>integrations</small></span>
+                </li>
+            </ul>
+
+            <div class="sidebar-group-label">Finish</div>
+            <ul>
+                <li data-tab="export" title="Download or share your result">
+                    <i class="fas fa-download"></i>
+                    <span class="nav-text"><span>Export</span><small>download, share</small></span>
+                    <span class="nav-tag">5</span>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="file-stats">
+                    <span id="rowCount">Rows: 0</span>
+                    <span id="fileCount">Files: 0</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <!-- AI Copilot Bar -->
+            <div class="ai-copilot-bar" id="aiCopilot">
+                <div class="ai-suggestions" id="aiSuggestions">
+                    <span class="ai-label"><i class="fas fa-lightbulb"></i> Try this next:</span>
+                    <div class="suggestion-chips" id="suggestionChips">
+                        <span class="chip">📊 Create Pivot Table</span>
+                        <span class="chip">📈 Show Trends</span>
+                        <span class="chip">🔍 Find Anomalies</span>
+                    </div>
+                </div>
+                <div class="ai-query">
+                    <input type="text" id="aiQuery" placeholder="Ask in plain English, e.g. 'total of Sales'" />
+                    <button id="aiQueryBtn" title="Ask"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+
+            <!-- TAB: Dashboard -->
+            <div id="tab-dashboard" class="tab-content active">
+                <div class="dashboard-welcome">
+                    <h2>Welcome back 👋</h2>
+                    <p>Sheet Commander helps you clean, combine, summarize and share spreadsheet data without formulas. Here's the usual path — click any step to jump there.</p>
+                    <div class="flow-steps">
+                        <div class="flow-step" data-jump="import"><span class="flow-num">1</span> Import a file</div>
+                        <div class="flow-step" data-jump="data"><span class="flow-num">2</span> Clean &amp; explore</div>
+                        <div class="flow-step" data-jump="pivot"><span class="flow-num">3</span> Summarize</div>
+                        <div class="flow-step" data-jump="charts"><span class="flow-num">4</span> Visualize</div>
+                        <div class="flow-step" data-jump="export"><span class="flow-num">5</span> Export &amp; share</div>
+                    </div>
+                </div>
+                <div class="dashboard-grid" id="dashboardGrid">
+                    <div class="widget-placeholder">
+                        <i class="fas fa-plus-circle"></i>
+                        <p>Build your own dashboard by adding widgets — charts, KPI cards, data grids and more.</p>
+                        <button class="btn primary" onclick="openWidgetLibrary()">➕ Add Widget</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Import -->
+            <div id="tab-import" class="tab-content">
+                <div class="page-head">
+                    <div class="page-head-text">
+                        <h3><i class="fas fa-upload"></i> Import Data</h3>
+                        <p>Bring one or more spreadsheets in to get started. Everything below updates automatically once your file loads.</p>
+                    </div>
+                    <span class="step-pill">STEP 1 OF 5</span>
+                </div>
+                <div class="import-section">
+                    <div class="drop-zone" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt fa-4x"></i>
+                        <h3>Drop your files here</h3>
+                        <p>Supports .xlsx, .csv and .txt — you can add more than one at a time</p>
+                        <input type="file" id="fileInput" multiple accept=".xlsx,.csv,.txt" />
+                        <button class="btn primary" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open"></i> Browse Files
+                        </button>
+                    </div>
+                    <div class="file-list" id="fileList">
+                        <!-- Dynamically populated -->
+                    </div>
+                    <div class="help-note">
+                        <i class="fas fa-circle-info"></i>
+                        <span><b>Got more than one file?</b> Use <b>Merge Files</b> to stack them into one table, or <b>Compare Files</b> to see what changed between two versions.</span>
+                    </div>
+                    <div class="import-actions">
+                        <button class="btn secondary" id="mergeBtn"><i class="fas fa-object-group"></i> Merge Files</button>
+                        <button class="btn secondary" id="compareBtn"><i class="fas fa-code-branch"></i> Compare Files</button>
+                        <button class="btn" id="autoDetectBtn"><i class="fas fa-magic"></i> Auto-Detect &amp; Design</button>
+                    </div>
+                    <div class="template-selector" id="templateSelector">
+                        <label>📋 Or start from a ready-made layout:</label>
+                        <button class="btn template" data-template="hr">👔 <span class="t-label">HR</span></button>
+                        <button class="btn template" data-template="finance">💰 <span class="t-label">Finance</span></button>
+                        <button class="btn template" data-template="sales">📊 <span class="t-label">Sales</span></button>
+                        <button class="btn template" data-template="inventory">📦 <span class="t-label">Inventory</span></button>
+                        <button class="btn template" data-template="project">📅 <span class="t-label">Project</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Data -->
+            <div id="tab-data" class="tab-content">
+                <div class="page-head">
+                    <div class="page-head-text">
+                        <h3><i class="fas fa-table"></i> View &amp; Clean Data</h3>
+                        <p>Sort, search and fix up your rows before you summarize or share them.</p>
+                    </div>
+                    <span class="step-pill">STEP 2 OF 5</span>
+                </div>
+                <div class="toolbar">
+                    <span class="toolbar-label">Sort by</span>
+                    <select id="sortColumn"><option value="">Choose column…</option></select>
+                    <button class="btn" onclick="sortData('asc')"><i class="fas fa-sort-alpha-up"></i> A→Z</button>
+                    <button class="btn" onclick="sortData('desc')"><i class="fas fa-sort-alpha-down"></i> Z→A</button>
+                    <button class="btn" onclick="sortData('num-asc')"><i class="fas fa-sort-numeric-up"></i> 1→9</button>
+                    <button class="btn" onclick="sortData('num-desc')"><i class="fas fa-sort-numeric-down"></i> 9→1</button>
+                </div>
+                <div class="shortcut-buttons">
+                    <button class="btn" onclick="removeDuplicates()"><i class="fas fa-clone"></i> Remove Duplicate Rows</button>
+                    <button class="btn" onclick="fillMissingValues()"><i class="fas fa-fill-drip"></i> Fill Missing Values</button>
+                    <button class="btn" onclick="trimSpaces()"><i class="fas fa-broom"></i> Trim Extra Spaces</button>
+                </div>
+                <div class="filter-bar">
+                    <input type="text" id="globalFilter" placeholder="🔍 Search across every column..." oninput="applyGlobalFilter()" />
+                </div>
+                <div class="data-grid-container" id="dataGridContainer">
+                    <div id="dataGrid"></div>
+                </div>
+            </div>
+
+            <!-- TAB: Pivot -->
+            <div id="tab-pivot" class="tab-content">
+                <div class="page-head">
+                    <div class="page-head-text">
+                        <h3><i class="fas fa-chart-pie"></i> Summarize (Pivot Table)</h3>
+                        <p>Group your data by a column and calculate totals, counts or averages — like Excel's pivot tables, no formulas needed.</p>
+                    </div>
+                    <span class="step-pill">STEP 3 OF 5</span>
+                </div>
+                <div class="toolbar">
+                    <div class="field-block">
+                        <label>Group rows by</label>
+                        <select id="pivotRow"><option value="">Choose column…</option></select>
+                    </div>
+                    <div class="field-block">
+                        <label>Then split by (optional)</label>
+                        <select id="pivotColumn"><option value="">Choose column…</option></select>
+                    </div>
+                    <div class="field-block">
+                        <label>Calculate on</label>
+                        <select id="pivotValue"><option value="">Choose column…</option></select>
+                    </div>
+                    <div class="field-block">
+                        <label>How</label>
+                        <select id="pivotAgg">
+                            <option value="sum">Sum</option>
+                            <option value="count">Count</option>
+                            <option value="avg">Average</option>
+                            <option value="min">Min</option>
+                            <option value="max">Max</option>
+                        </select>
+                    </div>
+                    <button class="btn primary" onclick="buildPivot()"><i class="fas fa-bolt"></i> Build Summary</button>
+                </div>
+                <div id="pivotResult"></div>
+            </div>
+
+            <!-- TAB: VLOOKUP -->
+            <div id="tab-vlookup" class="tab-content">
+                <div class="page-head">
+                    <div class="page-head-text">
+                        <h3><i class="fas fa-link"></i> Merge Files (VLOOKUP)</h3>
+                        <p>Combine your main table with a second file by matching a shared column — the same idea as Excel's VLOOKUP formula, done visually.</p>
+                    </div>
+                </div>
+                <div class="vlookup-section">
+                    <div class="file-upload-mini">
+                        <label>Upload the second file to pull data from:</label>
+                        <input type="file" id="lookupFile" accept=".xlsx,.csv" />
+                    </div>
+                    <div class="toolbar">
+                        <div class="field-block">
+                            <label>Match column in main file</label>
+                            <select id="lookupKeyMain"><option value="">Choose column…</option></select>
+                        </div>
+                        <div class="field-block">
+                            <label>Match column in second file</label>
+                            <select id="lookupKeySecondary"><option value="">Choose column…</option></select>
+                        </div>
+                        <div class="field-block">
+                            <label>Column to bring over</label>
+                            <select id="lookupReturn"><option value="">Choose column…</option></select>
+                        </div>
+                        <button class="btn primary" onclick="runVlookup()"><i class="fas fa-link"></i> Apply Merge</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: IF/ELSE -->
+            <div id="tab-ifelse" class="tab-content">
+                <div class="page-head">
+                    <div class="page-head-text">
+                        <h3><i class="fas fa-code-branch"></i> Add Rules (IF / ELSE)</h3>
+                        <p>Automatically label, flag or score rows based on a condition you set — e.g. "if Sales &gt; 1000, mark Gold".</p>
+                    </div>
+                </div>
+                <div class="toolbar">
+                    <div class="field-block">
+                        <label>Column</label>
+                        <select id="ifColumn"><option value="">Choose column…</option></select>
+                    </div>
+                    <div class="field-block">
+                        <label>Condition</label>
+                        <select id="ifCondition">
+                            <option value="gt">Greater Than</option>
+                            <option value="lt">Less Than</option>
+                            <option value="eq">Equals</option>
+                            <option value="contains">Contains</option>
+                            <option value="starts">Starts With</option>
+                            <option value="ends">Ends With</option>
+                        </select>
+                    </div>
+                    <div class="field-block">
+                        <label>Value</label>
+                        <input type="text" id="ifValue" placeholder="e.g. 1000" />
+                    </div>
+                    <div class="field-block">
+                        <label>New column name</label>
+                        <input type="text" id="ifResult" placeholder="Result Column Name" value="Result" />
+                    </div>
+                    <button class="btn primary" onclick="applyIfElse()"><i class="fas fa-play"></i> Apply Rule</button>
+                </div>
+                <div class="help-note">
+                    <i class="fas fa-circle-info"></i>
+                    <span>Not sure where to start? Try one of these ready-made rules:</span>
+                </div>
+                <div class="shortcut-buttons">
+                    <button class="btn" onclick="flagHighValues()">🚩 Flag High Values (&gt;100)</button>
+                    <button class="btn" onclick="passFail()">✅ Pass / Fail (Score &gt; 70)</button>
+                    <button class="btn" onclick="categorizeGoldSilver()">🏅 Gold / Silver (Sales &gt; 1000)</button>
+                    <button class="btn" onclick="conditionalFormatting()">🎨 Highlight Cells</button>
+                </div>
+            </div>
+
+            <!-- TAB: Charts -->
+            <div id="tab-charts" class="tab-content">
+                <div class="page-head">
+                    <div class="page-head-text">
+                        <h3><i class="fas fa-chart-line"></i> Visualize</h3>
+                        <p>Turn your columns into a chart you can screenshot, present or export.</p>
+                    </div>
+                    <span class="step-pill">STEP 4 OF 5</span>
+                </div>
+                <div class="toolbar">
+                    <div class="field-block">
+                        <label>Chart type</label>
+                        <select id="chartType">
+                            <option value="bar">Bar Chart</option>
+                            <option value="pie">Pie Chart</option>
+                            <option value="line">Line Chart</option>
+                            <option value="doughnut">Doughnut</option>
+                            <option value="scatter">Scatter Plot</option>
+                        </select>
+                    </div>
+                    <div class="field-block">
+                        <label>X-Axis</label>
+                        <select id="chartX"><option value="">Choose column…</option></select>
+                    </div>
+                    <div class="field-block">
+                        <label>Y-Axis</label>
+                        <select id="chartY"><option value="">Choose column…</option></select>
+                    </div>
+                    <button class="btn primary" onclick="createChart()"><i class="fas fa-chart-bar"></i> Generate Chart</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- TAB: Workflows -->
+            <div id="tab-workflows" class="tab-content">
+                <div class="page-head">
+                    <div class="page-head-text">
+                        <h3><i class="fas fa-robot"></i> Automation Workflows</h3>
+                        <p>Save a sequence of steps once, then run the whole thing again in one click next time.</p>
+                    </div>
+                </div>
+                <div class="workflow-toolbar">
+                    <button class="btn primary" onclick="recordWorkflow()"><i class="fas fa-record-vinyl"></i> Record New</button>
+                    <button class="btn" onclick="saveWorkflow()"><i class="fas fa-save"></i> Save Workflow</button>
+                    <button class="btn" onclick="loadWorkflow()"><i class="fas fa-folder-open"></i> Load Workflow</button>
+                </div>
+                <div class="workflow-list" id="workflowList">
+                    <!-- Pre-built workflows -->
+                    <div class="workflow-card" data-workflow="monthly">
+                        <i class="fas fa-calendar-alt"></i>
+                        <h4>Monthly Sales Report</h4>
+                        <p>Clean, pivot, and export monthly data</p>
+                        <button class="btn primary small" onclick="runWorkflow('monthly')">▶ Run</button>
+                    </div>
+                    <div class="workflow-card" data-workflow="cleanup">
+                        <i class="fas fa-broom"></i>
+                        <h4>Data Cleanup</h4>
+                        <p>Remove duplicates, fix formatting</p>
+                        <button class="btn primary small" onclick="runWorkflow('cleanup')">▶ Run</button>
+                    </div>
+                    <div class="workflow-card" data-workflow="compare">
+                        <i class="fas fa-code-branch"></i>
+                        <h4>Compare Files</h4>
+                        <p>Find differences between files</p>
+                        <button class="btn primary small" onclick="runWorkflow('compare')">▶ Run</button>
+                    </div>
+                </div>
+                <div id="workflowRecorder" style="display:none;">
+                    <h4>Recording actions…</h4>
+                    <div id="recordedActions"></div>
+                    <button class="btn" onclick="stopRecording()">Stop Recording</button>
+                </div>
+            </div>
+
+            <!-- TAB: Plugins -->
+            <div id="tab-plugins" class="tab-content">
+                <div class="page-head">
+                    <div class="page-head-text">
+                        <h3><i class="fas fa-puzzle-piece"></i> Plugin Manager</h3>
+                        <p>Extend Sheet Commander with extra integrations, like syncing to Google Sheets or posting to Slack.</p>
+                    </div>
+                </div>
+                <div class="plugin-toolbar">
+                    <button class="btn primary" onclick="openPluginMarket()"><i class="fas fa-store"></i> Marketplace</button>
+                    <button class="btn" onclick="installPlugin()"><i class="fas fa-download"></i> Install Plugin</button>
+                </div>
+                <div class="plugin-list" id="pluginList">
+                    <!-- Plugins loaded here -->
+                </div>
+            </div>
+
+            <!-- TAB: Export -->
+            <div id="tab-export" class="tab-content">
+                <div class="page-head">
+                    <div class="page-head-text">
+                        <h3><i class="fas fa-download"></i> Export &amp; Share</h3>
+                        <p>Download your finished data in the format you need, or set it to send automatically.</p>
+                    </div>
+                    <span class="step-pill">STEP 5 OF 5</span>
+                </div>
+                <div class="export-options">
+                    <button class="btn primary" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Download .xlsx</button>
+                    <button class="btn secondary" onclick="exportCSV()"><i class="fas fa-file-csv"></i> Download .CSV</button>
+                    <button class="btn" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> Download .PDF</button>
+                    <button class="btn" onclick="copyToClipboard()"><i class="fas fa-copy"></i> Copy to Clipboard</button>
+                    <button class="btn" onclick="shareReport()"><i class="fas fa-share-alt"></i> Share Report</button>
+                </div>
+                <div class="schedule-section">
+                    <h4>📅 Schedule a recurring report</h4>
+                    <select id="scheduleType">
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <input type="time" id="scheduleTime" value="09:00" />
+                    <button class="btn" onclick="scheduleReport()"><i class="fas fa-clock"></i> Schedule</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR: Comments & Collaboration -->
+        <aside class="right-sidebar" id="rightSidebar">
+            <div class="collab-header">
+                <i class="fas fa-comments"></i>
+                <h4>Comments</h4>
+                <button class="btn-icon small" onclick="toggleSidebar()" title="Hide"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="comment-list" id="commentList">
+                <div class="comment-list-empty">
+                    <i class="fas fa-comment-dots"></i>
+                    No comments yet — leave a note for your team below.
+                </div>
+            </div>
+            <div class="comment-input">
+                <input type="text" id="commentInput" placeholder="Add comment..." />
+                <button onclick="addComment()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- ========== MODALS ========== -->
+    <div class="modal" id="aiModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-brain"></i> AI Assistant</h3>
+                <button onclick="closeModal('aiModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="aiModalBody">
+                <div class="ai-chat">
+                    <div class="ai-message bot">Hello! I'm your AI assistant. Ask me anything about your data — for example "create pivot by Region" or "total of Sales".</div>
+                    <div id="aiChatHistory"></div>
+                </div>
+                <div class="ai-input">
+                    <input type="text" id="aiChatInput" placeholder="Ask me..." />
+                    <button onclick="sendAIMessage()"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="widgetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Add Widget</h3>
+                <button onclick="closeModal('widgetModal')">&times;</button>
+            </div>
+            <div class="modal-body widget-library">
+                <div class="widget-category">Charts</div>
+                <button class="widget-option" onclick="addWidget('chart')"><i class="fas fa-chart-bar"></i> Chart</button>
+                <button class="widget-option" onclick="addWidget('pie')"><i class="fas fa-chart-pie"></i> Pie Chart</button>
+                <button class="widget-option" onclick="addWidget('line')"><i class="fas fa-chart-line"></i> Line Chart</button>
+                <div class="widget-category">Data</div>
+                <button class="widget-option" onclick="addWidget('grid')"><i class="fas fa-table"></i> Data Grid</button>
+                <button class="widget-option" onclick="addWidget('pivot')"><i class="fas fa-table"></i> Pivot Table</button>
+                <button class="widget-option" onclick="addWidget('kpi')"><i class="fas fa-gauge-high"></i> KPI Card</button>
+                <div class="widget-category">Analysis</div>
+                <button class="widget-option" onclick="addWidget('trend')"><i class="fas fa-arrow-trend-up"></i> Trend</button>
+                <button class="widget-option" onclick="addWidget('anomaly')"><i class="fas fa-exclamation-triangle"></i> Anomaly</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome / onboarding tour (first visit only) -->
+    <div class="modal" id="welcomeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-map-signs"></i> Welcome to Sheet Commander</h3>
+                <button onclick="closeModal('welcomeModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--text-light); font-size:13px; margin-bottom:14px; line-height:1.55;">
+                    No formulas, no manuals. Here's the usual path from raw file to finished report:
+                </p>
+                <div class="tour-steps">
+                    <div class="tour-step">
+                        <span class="tour-num">1</span>
+                        <div><h4>Import your file</h4><p>Drag in an .xlsx, .csv or .txt file — or start from a ready-made HR, Finance or Sales layout.</p></div>
+                    </div>
+                    <div class="tour-step">
+                        <span class="tour-num">2</span>
+                        <div><h4>Clean &amp; explore</h4><p>Sort, search, remove duplicates, or merge in a second file — all with buttons, no formulas.</p></div>
+                    </div>
+                    <div class="tour-step">
+                        <span class="tour-num">3</span>
+                        <div><h4>Summarize &amp; visualize</h4><p>Build a pivot table or a chart in a couple of clicks.</p></div>
+                    </div>
+                    <div class="tour-step">
+                        <span class="tour-num">4</span>
+                        <div><h4>Export &amp; share</h4><p>Download as Excel, CSV or PDF — or schedule it to repeat.</p></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <label><input type="checkbox" id="dontShowWelcome" /> Don't show this again</label>
+                <button class="btn primary" onclick="closeModal('welcomeModal')">Got it, let's go</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help & shortcuts modal -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-circle-question"></i> Help &amp; Shortcuts</h3>
+                <button onclick="closeModal('helpModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="shortcut-list">
+                    <div class="shortcut-row"><span>Talk to the app (voice command)</span><kbd>Space</kbd></div>
+                    <div class="shortcut-row"><span>Open the AI Assistant</span><span>Click the <i class="fas fa-brain"></i> icon, top right</span></div>
+                    <div class="shortcut-row"><span>Replay the welcome tour</span><button class="btn small" onclick="closeModal('helpModal'); openModal('welcomeModal')">Show tour</button></div>
+                </div>
+                <div class="help-note" style="margin-top:16px;">
+                    <i class="fas fa-circle-info"></i>
+                    <span>Every screen in the sidebar follows the same left-to-right flow: <b>Import → Clean → Summarize → Visualize → Export</b>. The numbered tags in the sidebar and the bar under the header always show you where you are.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCRIPTS ========== -->
+    <script src="script.js"></script>
+    <script src="ui-enhancements.js"></script>
+</body>
+</html>
