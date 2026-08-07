@@ -1445,3 +1445,213 @@ h1, h2, h3, h4, .btn, .sidebar, .logo {
 .gap-8 { gap: 8px; }
 .items-center { align-items: center; }
 .justify-between { justify-content: space-between; }
+
+/* ============================================
+   LIVE SHEET DOCK — always-visible sheet above the
+   tool controls, so every action's effect is seen
+   immediately, without switching screens.
+   ============================================ */
+.live-sheet-dock {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+.live-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--primary-wash);
+    border-radius: var(--radius) var(--radius) 0 0;
+    flex-wrap: wrap;
+}
+.live-sheet-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.live-sheet-title i { color: var(--secondary); }
+.live-sheet-title small {
+    font-weight: 400;
+    color: var(--text-light);
+    font-family: var(--font-body);
+}
+.live-sheet-header #globalFilter {
+    flex: 1 1 260px;
+    max-width: 360px;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-family: var(--font-body);
+}
+.live-sheet-dock .data-grid-container {
+    margin-top: 0;
+    border: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    box-shadow: none;
+    max-height: 320px;
+}
+.dock-hint {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.dock-hint i { color: var(--secondary); }
+
+/* Flash highlight for a newly-added column so the change is obvious */
+#dataGrid th.col-new,
+#dataGrid td.col-new {
+    animation: colFlash 1.6s ease 2;
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+@keyframes colFlash {
+    0%, 100% { background: var(--accent-wash); }
+    50% { background: rgba(221, 106, 63, 0.35); }
+}
+
+/* ===== FILE BOUNDARY (used in Merge Files / VLOOKUP) ===== */
+.file-boundary-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    margin: 14px 0;
+}
+.file-boundary-card {
+    flex: 1;
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 12.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border: 1px dashed var(--border);
+}
+.file-boundary-card.file-1 {
+    background: var(--secondary-wash);
+    border-color: var(--secondary);
+}
+.file-boundary-card.file-2 {
+    background: var(--accent-wash);
+    border-color: var(--accent);
+}
+.file-boundary-tag {
+    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: 12px;
+}
+.file-boundary-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    font-size: 16px;
+}
+.lookup-preview {
+    margin-bottom: 12px;
+}
+.lookup-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: var(--card);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.lookup-preview th {
+    background: var(--accent);
+    color: white;
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 11px;
+}
+.lookup-preview td {
+    padding: 6px 10px;
+    border-top: 1px solid var(--border);
+}
+.lookup-preview caption {
+    text-align: left;
+    font-size: 11.5px;
+    color: var(--text-light);
+    padding: 4px 2px;
+    caption-side: top;
+}
+
+/* ===== TEMPLATE GALLERY (50 designs) ===== */
+.modal-content.wide { max-width: 920px; }
+.gallery-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+.gallery-tab {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-body);
+}
+.gallery-tab.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+.template-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding: 2px;
+}
+.template-gallery-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--card);
+    transition: var(--transition);
+    text-align: left;
+}
+.template-gallery-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: var(--secondary);
+}
+.template-gallery-swatch {
+    height: 46px;
+    display: flex;
+}
+.template-gallery-swatch span { flex: 1; }
+.template-gallery-card-body {
+    padding: 8px 10px;
+}
+.template-gallery-card-body .tg-name {
+    font-size: 12px;
+    font-weight: 700;
+    display: block;
+}
+.template-gallery-card-body .tg-cat {
+    font-size: 10.5px;
+    color: var(--text-light);
+}
